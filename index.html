@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GPF Portfolio Tracker | กบข. ติดตามพอร์ตลงทุน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --emerald: #10b981;
+    --emerald-dim: #064e3b;
+    --red: #f43f5e;
+    --blue: #3b82f6;
+    --gold: #f59e0b;
+    --bg: #020617;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    font-family: 'Sarabun', sans-serif;
+    color: #e2e8f0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background mesh ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(16,185,129,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(59,130,246,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 50% 50%, rgba(245,158,11,0.03) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Grid noise overlay */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+
+  .page-wrap { position: relative; z-index: 1; }
+
+  /* ── Cards ── */
+  .glass {
+    background: var(--card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  .glass:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s, box-shadow 0.25s;
+    cursor: default;
+  }
+  .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent-color, var(--emerald));
+    opacity: 0.8;
+  }
+
+  /* ── Typography ── */
+  h1, h2, h3, .font-heading { font-family: 'Kanit', sans-serif; }
+  .num { font-family: 'Kanit', sans-serif; font-weight: 600; letter-spacing: -0.02em; }
+
+  /* ── Inputs ── */
+  .inp {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0.75rem;
+    padding: 0.625rem 1rem;
+    color: #e2e8f0;
+    width: 100%;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.9375rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .inp:focus {
+    border-color: var(--emerald);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+  }
+  .inp::placeholder { color: rgba(255,255,255,0.25); }
+  select.inp option { background: #0f172a; color: #e2e8f0; }
+
+  label { font-size: 0.8125rem; color: rgba(255,255,255,0.5); font-weight: 500; display: block; margin-bottom: 0.375rem; letter-spacing: 0.04em; text-transform: uppercase; }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.75rem;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+    width: 100%;
+  }
+  .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(16,185,129,0.45); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-sim {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.75rem;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+    width: 100%;
+  }
+  .btn-sim:hover { opacity: 0.92; transform: translateY(-1px); }
+
+  .btn-del {
+    background: rgba(244,63,94,0.15);
+    border: 1px solid rgba(244,63,94,0.3);
+    color: #f43f5e;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: 'Sarabun', sans-serif;
+  }
+  .btn-del:hover { background: rgba(244,63,94,0.25); }
+
+  /* ── Nav ── */
+  .nav-pill {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 0.625rem;
+    padding: 0.375rem 1rem;
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-pill:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
+  .nav-pill.active { background: rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.4); color: #10b981; }
+
+  /* ── Table ── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .data-table td {
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  .data-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+
+  /* ── Badge ── */
+  .plan-badge {
+    display: inline-flex; align-items: center;
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: #60a5fa;
+    border-radius: 9999px;
+    padding: 0.15rem 0.625rem;
+    font-size: 0.75rem;
+    font-family: 'Kanit', sans-serif;
+  }
+
+  /* ── Profit chip ── */
+  .profit-pos { color: #10b981; }
+  .profit-neg { color: #f43f5e; }
+
+  /* ── Skeleton loader ── */
+  .skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+    border-radius: 0.5rem;
+  }
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+    background: #0f172a;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0.875rem;
+    padding: 0.875rem 1.25rem;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.9rem;
+    min-width: 240px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(.34,1.56,.64,1);
+    pointer-events: none;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Section tabs ── */
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+
+  /* ── Range input ── */
+  input[type=range] { accent-color: var(--blue); }
+
+  /* ── Chart container ── */
+  .chart-wrap { position: relative; height: 320px; }
+
+  /* ── Sim result card ── */
+  .sim-result {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+  .sim-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up { animation: fadeUp 0.5s ease both; }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+
+  /* ── Mobile ── */
+  @media (max-width: 640px) {
+    .hide-mobile { display: none; }
+    .data-table th, .data-table td { padding: 0.625rem 0.5rem; font-size: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap min-h-screen">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="sticky top-0 z-50 border-b border-white/5 backdrop-blur-xl bg-[#020617]/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-lg">💰</div>
+        <div>
+          <div class="font-heading font-semibold text-white leading-tight text-sm sm:text-base">GPF Portfolio Tracker</div>
+          <div class="text-xs text-white/30 leading-tight">กบข. ติดตามพอร์ตลงทุน</div>
+        </div>
+      </div>
+
+      <!-- Nav pills -->
+      <nav class="flex gap-2">
+        <button class="nav-pill active" onclick="switchTab('dashboard')">📊 ภาพรวม</button>
+        <button class="nav-pill" onclick="switchTab('entry')">➕ บันทึก</button>
+        <button class="nav-pill hide-mobile" onclick="switchTab('history')">📋 ประวัติ</button>
+        <button class="nav-pill hide-mobile" onclick="switchTab('simulator')">🔮 จำลอง</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+    <!-- ══════════════ TAB: DASHBOARD ══════════════ -->
+    <div id="tab-dashboard" class="tab-section active">
+
+      <!-- Stat cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+        <div class="stat-card fade-up" style="--accent-color:#10b981">
+          <div class="text-xs text-white/40 mb-2 uppercase tracking-widest font-heading">ยอดเงินรวม</div>
+          <div class="num text-2xl sm:text-3xl text-white" id="s-total">—</div>
+          <div class="text-xs text-white/30 mt-1">บาท</div>
+          <div class="absolute bottom-3 right-3 text-2xl opacity-20">💼</div>
+        </div>
+
+        <div class="stat-card fade-up delay-1" id="s-profit-card" style="--accent-color:#10b981">
+          <div class="text-xs text-white/40 mb-2 uppercase tracking-widest font-heading">กำไร/ขาดทุน</div>
+          <div class="num text-2xl sm:text-3xl" id="s-profit">—</div>
+          <div class="text-xs text-white/30 mt-1" id="s-profit-pct">—%</div>
+          <div class="absolute bottom-3 right-3 text-2xl opacity-20">📈</div>
+        </div>
+
+        <div class="stat-card fade-up delay-2" style="--accent-color:#3b82f6">
+          <div class="text-xs text-white/40 mb-2 uppercase tracking-widest font-heading">เงินต้นรวม</div>
+          <div class="num text-2xl sm:text-3xl text-blue-400" id="s-principal">—</div>
+          <div class="text-xs text-white/30 mt-1">บาท</div>
+          <div class="absolute bottom-3 right-3 text-2xl opacity-20">🏦</div>
+        </div>
+
+        <div class="stat-card fade-up delay-3" style="--accent-color:#f59e0b">
+          <div class="text-xs text-white/40 mb-2 uppercase tracking-widest font-heading">แผนการลงทุน</div>
+          <div class="font-heading font-semibold text-amber-400 text-lg mt-1" id="s-plan">—</div>
+          <div class="text-xs text-white/30 mt-1" id="s-date">อัปเดตล่าสุด —</div>
+          <div class="absolute bottom-3 right-3 text-2xl opacity-20">🗂️</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+        <!-- Growth chart (2/3) -->
+        <div class="glass p-6 lg:col-span-2 fade-up delay-1">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h2 class="font-heading font-semibold text-white text-lg">ความเติบโตของพอร์ต</h2>
+              <p class="text-xs text-white/40 mt-0.5">เปรียบเทียบยอดรวม vs เงินต้น</p>
+            </div>
+            <div class="flex gap-3 text-xs text-white/50">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-emerald-400 inline-block"></span>ยอดรวม</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-1.5 rounded-full bg-blue-400 inline-block"></span>เงินต้น</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="growthChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Donut chart (1/3) -->
+        <div class="glass p-6 fade-up delay-2">
+          <div class="mb-6">
+            <h2 class="font-heading font-semibold text-white text-lg">สัดส่วนพอร์ต</h2>
+            <p class="text-xs text-white/40 mt-0.5">เงินต้น vs กำไร</p>
+          </div>
+          <div class="chart-wrap" style="height:240px">
+            <canvas id="donutChart"></canvas>
+          </div>
+          <div id="donut-legend" class="mt-4 flex flex-col gap-2"></div>
+        </div>
+      </div>
+
+      <!-- Recent entries -->
+      <div class="glass p-6 fade-up delay-3">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-heading font-semibold text-white text-lg">รายการล่าสุด</h2>
+          <button class="nav-pill text-xs" onclick="switchTab('history')">ดูทั้งหมด →</button>
+        </div>
+        <div id="recent-table-wrap" class="overflow-x-auto">
+          <div class="skeleton h-10 mb-2 rounded-lg"></div>
+          <div class="skeleton h-10 mb-2 rounded-lg"></div>
+          <div class="skeleton h-10 rounded-lg"></div>
+        </div>
+      </div>
+    </div><!-- /dashboard -->
+
+    <!-- ══════════════ TAB: ENTRY ══════════════ -->
+    <div id="tab-entry" class="tab-section">
+      <div class="max-w-lg mx-auto">
+        <div class="glass p-8 fade-up">
+          <div class="mb-8 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-3xl mx-auto mb-4">📝</div>
+            <h2 class="font-heading font-bold text-white text-2xl">บันทึกข้อมูลพอร์ต</h2>
+            <p class="text-white/40 text-sm mt-1">อัปเดตมูลค่า กบข. ประจำงวด</p>
+          </div>
+
+          <form id="entry-form" onsubmit="handleSubmit(event)">
+            <div class="flex flex-col gap-5">
+
+              <div>
+                <label>วันที่บันทึก</label>
+                <input type="date" id="f-date" class="inp" required />
+              </div>
+
+              <div>
+                <label>ยอดเงินรวม (บาท)</label>
+                <input type="number" id="f-total" class="inp" placeholder="เช่น 850000.00" step="0.01" min="0" required />
+              </div>
+
+              <div>
+                <label>เงินต้นรวม (บาท)</label>
+                <input type="number" id="f-principal" class="inp" placeholder="เช่น 720000.00" step="0.01" min="0" required />
+              </div>
+
+              <!-- Live preview -->
+              <div id="preview-box" class="hidden bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
+                <div class="text-xs text-white/40 mb-2 uppercase tracking-widest">ตัวอย่างผลลัพธ์</div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><div class="text-xs text-white/40">กำไร/ขาดทุน</div><div class="num font-semibold" id="prev-profit">—</div></div>
+                  <div><div class="text-xs text-white/40">ผลตอบแทน</div><div class="num font-semibold" id="prev-rate">—</div></div>
+                </div>
+              </div>
+
+              <div>
+                <label>แผนการลงทุน</label>
+                <select id="f-plan" class="inp">
+                  <option value="กบข. ตราสารหนี้">ตราสารหนี้</option>
+                  <option value="กบข. ตราสารหนี้">ผสม ทอง+ตปท.</option>
+                  <option value="กบข. ตลาดเงิน">ผสม ทอง+ตปท.+อสังหา</option>
+                  <option value="กบข. หุ้นไทย">ตปท.</option>
+                  <option value="กบข. หุ้นไทย">แผนลงทุนพื้นฐานทั่วไป</option>
+                  <option value="อื่นๆ">อื่นๆ</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn-primary mt-2" id="submit-btn">
+                <span id="submit-text">💾 บันทึกข้อมูล</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div><!-- /entry -->
+
+    <!-- ══════════════ TAB: HISTORY ══════════════ -->
+    <div id="tab-history" class="tab-section">
+      <div class="glass p-6 fade-up">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="font-heading font-bold text-white text-xl">ประวัติการบันทึก</h2>
+            <p class="text-white/40 text-sm mt-0.5">รายการทั้งหมดเรียงตามวันล่าสุด</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-white/30" id="total-records">0 รายการ</span>
+            <button onclick="refreshData()" class="nav-pill text-xs">🔄 รีเฟรช</button>
+          </div>
+        </div>
+
+        <div id="history-wrap" class="overflow-x-auto">
+          <div class="skeleton h-10 mb-2 rounded-lg"></div>
+          <div class="skeleton h-10 mb-2 rounded-lg"></div>
+          <div class="skeleton h-10 rounded-lg"></div>
+        </div>
+      </div>
+    </div><!-- /history -->
+
+    <!-- ══════════════ TAB: SIMULATOR ══════════════ -->
+    <div id="tab-simulator" class="tab-section">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Inputs -->
+        <div class="glass p-8 fade-up">
+          <div class="mb-8">
+            <div class="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-3xl mb-4">🔮</div>
+            <h2 class="font-heading font-bold text-white text-2xl">จำลองการเติบโต</h2>
+            <p class="text-white/40 text-sm mt-1">คำนวณผลตอบแทนทบต้นในอนาคต</p>
+          </div>
+
+          <div class="flex flex-col gap-5">
+            <div>
+              <label>เงินต้นเริ่มต้น (บาท)</label>
+              <input type="number" id="sim-p" class="inp" value="500000" step="1000" oninput="runSimulator()" />
+            </div>
+            <div>
+              <label>ฝากเพิ่มรายเดือน (บาท)</label>
+              <input type="number" id="sim-pmt" class="inp" value="5000" step="500" oninput="runSimulator()" />
+            </div>
+            <div>
+              <label>อัตราผลตอบแทนต่อปี: <span class="text-emerald-400 font-heading" id="sim-r-label">8%</span></label>
+              <input type="range" id="sim-r" class="w-full" min="1" max="25" value="8" step="0.5" oninput="document.getElementById('sim-r-label').textContent=this.value+'%'; runSimulator()" />
+              <div class="flex justify-between text-xs text-white/30 mt-1"><span>1%</span><span>25%</span></div>
+            </div>
+            <div>
+              <label>ระยะเวลา: <span class="text-blue-400 font-heading" id="sim-y-label">10 ปี</span></label>
+              <input type="range" id="sim-y" class="w-full" min="1" max="40" value="10" step="1" oninput="document.getElementById('sim-y-label').textContent=this.value+' ปี'; runSimulator()" />
+              <div class="flex justify-between text-xs text-white/30 mt-1"><span>1 ปี</span><span>40 ปี</span></div>
+            </div>
+            <button class="btn-sim mt-2" onclick="runSimulator()">🚀 คำนวณ</button>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="flex flex-col gap-6">
+          <!-- Result boxes -->
+          <div class="glass p-6 fade-up delay-1">
+            <h3 class="font-heading font-semibold text-white mb-4">ผลลัพธ์ที่คาดการณ์</h3>
+            <div class="sim-result" id="sim-results">
+              <div class="sim-box"><div class="text-xs text-white/40 mb-2">มูลค่าสุดท้าย</div><div class="num text-xl text-emerald-400" id="sim-fv">—</div></div>
+              <div class="sim-box"><div class="text-xs text-white/40 mb-2">กำไรรวม</div><div class="num text-xl text-emerald-400" id="sim-gain">—</div></div>
+              <div class="sim-box"><div class="text-xs text-white/40 mb-2">เงินที่ลงทุน</div><div class="num text-xl text-blue-400" id="sim-invested">—</div></div>
+              <div class="sim-box"><div class="text-xs text-white/40 mb-2">ผลตอบแทนรวม</div><div class="num text-xl text-amber-400" id="sim-roi">—</div></div>
+            </div>
+          </div>
+
+          <!-- Sim chart -->
+          <div class="glass p-6 fade-up delay-2 flex-1">
+            <h3 class="font-heading font-semibold text-white mb-4">กราฟการเติบโต</h3>
+            <div class="chart-wrap" style="height: 280px;">
+              <canvas id="simChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /simulator -->
+
+    <!-- Mobile extra nav -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#020617]/90 backdrop-blur-xl border-t border-white/5 flex">
+      <button class="flex-1 py-3 text-xs flex flex-col items-center gap-1 text-white/50 mobile-nav-btn" onclick="switchTab('dashboard')" data-tab="dashboard">
+        <span class="text-lg">📊</span><span>ภาพรวม</span>
+      </button>
+      <button class="flex-1 py-3 text-xs flex flex-col items-center gap-1 text-white/50 mobile-nav-btn" onclick="switchTab('entry')" data-tab="entry">
+        <span class="text-lg">➕</span><span>บันทึก</span>
+      </button>
+      <button class="flex-1 py-3 text-xs flex flex-col items-center gap-1 text-white/50 mobile-nav-btn" onclick="switchTab('history')" data-tab="history">
+        <span class="text-lg">📋</span><span>ประวัติ</span>
+      </button>
+      <button class="flex-1 py-3 text-xs flex flex-col items-center gap-1 text-white/50 mobile-nav-btn" onclick="switchTab('simulator')" data-tab="simulator">
+        <span class="text-lg">🔮</span><span>จำลอง</span>
+      </button>
+    </div>
+    <div class="lg:hidden h-16"></div><!-- mobile bottom spacer -->
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/AKfycbx9KwTkSxJBIeTBk84rq7G-ve82ngZdpDjd9lN7YhTq_sUCATxronBI0f2sY0tbT3KN/exec';
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let allData = [];
+let growthChartInstance = null;
+let donutChartInstance = null;
+let simChartInstance = null;
+let currentTab = 'dashboard';
+
+// ══════════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════════
+const fmt = n => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtK = n => {
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return Number(n).toFixed(2);
+};
+const fmtDate = s => {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+// ══════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  el.innerHTML = `<span class="mr-2">${icon}</span>${msg}`;
+  el.style.borderColor = type === 'success' ? 'rgba(16,185,129,0.4)' : type === 'error' ? 'rgba(244,63,94,0.4)' : 'rgba(255,255,255,0.12)';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+
+  document.querySelectorAll('.nav-pill').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll(`.nav-pill[onclick*="${tab}"]`).forEach(b => b.classList.add('active'));
+
+  document.querySelectorAll('.mobile-nav-btn').forEach(b => {
+    b.classList.toggle('text-emerald-400', b.dataset.tab === tab);
+    b.classList.toggle('text-white/50', b.dataset.tab !== tab);
+  });
+
+  if (tab === 'simulator') runSimulator();
+}
+
+// ══════════════════════════════════════════════════════
+//  FETCH DATA
+// ══════════════════════════════════════════════════════
+async function fetchData() {
+  try {
+    const res = await fetch(API_URL + '?action=getData');
+    const json = await res.json();
+    if (json.success) {
+      allData = json.data || [];
+      renderAll();
+    } else {
+      throw new Error(json.error || 'API error');
+    }
+  } catch (e) {
+    console.error(e);
+    toast('ไม่สามารถโหลดข้อมูลได้: ' + e.message, 'error');
+    renderAll(); // render with empty
+  }
+}
+
+async function refreshData() {
+  toast('กำลังรีเฟรชข้อมูล...', 'info');
+  await fetchData();
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER ALL
+// ══════════════════════════════════════════════════════
+function renderAll() {
+  renderStatCards();
+  renderGrowthChart();
+  renderDonutChart();
+  renderRecentTable();
+  renderHistoryTable();
+}
+
+// ══════════════════════════════════════════════════════
+//  STAT CARDS
+// ══════════════════════════════════════════════════════
+function renderStatCards() {
+  const latest = allData[0] || null;
+  if (!latest) {
+    ['s-total', 's-profit', 's-principal'].forEach(id => document.getElementById(id).textContent = '—');
+    document.getElementById('s-profit-pct').textContent = '—';
+    document.getElementById('s-plan').textContent = '—';
+    document.getElementById('s-date').textContent = 'ยังไม่มีข้อมูล';
+    return;
+  }
+
+  document.getElementById('s-total').textContent = fmt(latest.totalBalance);
+  document.getElementById('s-principal').textContent = fmt(latest.principal);
+
+  const profitEl = document.getElementById('s-profit');
+  const profitPct = document.getElementById('s-profit-pct');
+  profitEl.textContent = (latest.profit >= 0 ? '+' : '') + fmt(latest.profit);
+  profitEl.className = 'num text-2xl sm:text-3xl ' + (latest.profit >= 0 ? 'profit-pos' : 'profit-neg');
+  profitPct.textContent = (latest.returnRate >= 0 ? '+' : '') + latest.returnRate.toFixed(2) + '%';
+  profitPct.className = 'text-xs mt-1 ' + (latest.profit >= 0 ? 'profit-pos' : 'profit-neg');
+
+  const card = document.getElementById('s-profit-card');
+  card.style.setProperty('--accent-color', latest.profit >= 0 ? '#10b981' : '#f43f5e');
+
+  document.getElementById('s-plan').textContent = latest.currentPlan || '—';
+  document.getElementById('s-date').textContent = 'อัปเดต ' + fmtDate(latest.date);
+}
+
+// ══════════════════════════════════════════════════════
+//  GROWTH CHART
+// ══════════════════════════════════════════════════════
+function renderGrowthChart() {
+  const ctx = document.getElementById('growthChart').getContext('2d');
+  const sorted = [...allData].reverse();
+
+  const labels = sorted.map(d => fmtDate(d.date));
+  const totals = sorted.map(d => d.totalBalance);
+  const principals = sorted.map(d => d.principal);
+
+  if (growthChartInstance) growthChartInstance.destroy();
+
+  Chart.defaults.color = 'rgba(255,255,255,0.4)';
+  Chart.defaults.font.family = "'Sarabun', sans-serif";
+
+  growthChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'ยอดเงินรวม',
+          data: totals,
+          borderColor: '#10b981',
+          backgroundColor: ctx => {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 320);
+            g.addColorStop(0, 'rgba(16,185,129,0.3)');
+            g.addColorStop(1, 'rgba(16,185,129,0)');
+            return g;
+          },
+          borderWidth: 2.5,
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#10b981',
+          pointRadius: sorted.length > 20 ? 0 : 4,
+          pointHoverRadius: 6,
+        },
+        {
+          label: 'เงินต้น',
+          data: principals,
+          borderColor: '#3b82f6',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 4],
+          tension: 0.4,
+          fill: false,
+          pointBackgroundColor: '#3b82f6',
+          pointRadius: sorted.length > 20 ? 0 : 3,
+          pointHoverRadius: 5,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(2,6,23,0.95)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ฿${fmt(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { maxTicksLimit: 8, font: { size: 11 } }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: {
+            font: { size: 11 },
+            callback: v => '฿' + fmtK(v)
+          }
+        }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  DONUT CHART
+// ══════════════════════════════════════════════════════
+function renderDonutChart() {
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  const latest = allData[0] || null;
+
+  if (donutChartInstance) donutChartInstance.destroy();
+
+  const principal = latest ? latest.principal : 0;
+  const profit = latest ? Math.max(0, latest.profit) : 0;
+  const hasData = principal + profit > 0;
+
+  donutChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['เงินต้น', 'กำไร'],
+      datasets: [{
+        data: hasData ? [principal, profit] : [1, 0],
+        backgroundColor: ['rgba(59,130,246,0.8)', 'rgba(16,185,129,0.8)'],
+        borderColor: ['rgba(59,130,246,1)', 'rgba(16,185,129,1)'],
+        borderWidth: 1.5,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(2,6,23,0.95)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          callbacks: {
+            label: ctx => ` ฿${fmt(ctx.parsed)}`
+          }
+        }
+      }
+    }
+  });
+
+  const legend = document.getElementById('donut-legend');
+  legend.innerHTML = `
+    <div class="flex justify-between items-center"><span class="flex items-center gap-2 text-sm text-white/60"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span>เงินต้น</span><span class="num text-sm text-blue-400">฿${fmt(principal)}</span></div>
+    <div class="flex justify-between items-center"><span class="flex items-center gap-2 text-sm text-white/60"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>กำไร</span><span class="num text-sm text-emerald-400">฿${fmt(profit)}</span></div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+//  RECENT TABLE (Dashboard)
+// ══════════════════════════════════════════════════════
+function renderRecentTable() {
+  const wrap = document.getElementById('recent-table-wrap');
+  const recent = allData.slice(0, 5);
+
+  if (!recent.length) {
+    wrap.innerHTML = '<div class="text-center py-10 text-white/30 text-sm">ยังไม่มีข้อมูล — กรุณาบันทึกข้อมูลพอร์ตแรก</div>';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>วันที่</th>
+          <th>ยอดรวม</th>
+          <th class="hide-mobile">เงินต้น</th>
+          <th>กำไร/ขาดทุน</th>
+          <th class="hide-mobile">ผลตอบแทน</th>
+          <th>แผน</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${recent.map(row => `
+          <tr>
+            <td class="text-white/60 text-sm">${fmtDate(row.date)}</td>
+            <td class="num text-white font-medium">฿${fmt(row.totalBalance)}</td>
+            <td class="num text-blue-400 hide-mobile">฿${fmt(row.principal)}</td>
+            <td class="num ${row.profit >= 0 ? 'profit-pos' : 'profit-neg'}">${row.profit >= 0 ? '+' : ''}฿${fmt(row.profit)}</td>
+            <td class="num ${row.returnRate >= 0 ? 'profit-pos' : 'profit-neg'} hide-mobile">${row.returnRate >= 0 ? '+' : ''}${row.returnRate.toFixed(2)}%</td>
+            <td><span class="plan-badge">${row.currentPlan}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+//  HISTORY TABLE
+// ══════════════════════════════════════════════════════
+function renderHistoryTable() {
+  const wrap = document.getElementById('history-wrap');
+  document.getElementById('total-records').textContent = allData.length + ' รายการ';
+
+  if (!allData.length) {
+    wrap.innerHTML = '<div class="text-center py-10 text-white/30 text-sm">ยังไม่มีข้อมูล</div>';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>วันที่</th>
+          <th>ยอดรวม</th>
+          <th class="hide-mobile">เงินต้น</th>
+          <th>กำไร/ขาดทุน</th>
+          <th>ผลตอบแทน</th>
+          <th class="hide-mobile">แผน</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${allData.map((row, i) => `
+          <tr>
+            <td class="text-white/30 text-xs">${i + 1}</td>
+            <td class="text-white/60 text-sm">${fmtDate(row.date)}</td>
+            <td class="num text-white font-medium">฿${fmt(row.totalBalance)}</td>
+            <td class="num text-blue-400 hide-mobile">฿${fmt(row.principal)}</td>
+            <td class="num ${row.profit >= 0 ? 'profit-pos' : 'profit-neg'}">${row.profit >= 0 ? '+' : ''}฿${fmt(row.profit)}</td>
+            <td class="num ${row.returnRate >= 0 ? 'profit-pos' : 'profit-neg'}">${row.returnRate >= 0 ? '+' : ''}${row.returnRate.toFixed(2)}%</td>
+            <td class="hide-mobile"><span class="plan-badge">${row.currentPlan}</span></td>
+            <td><button class="btn-del" onclick="deleteEntry(${row.id}, this)">ลบ</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+//  ENTRY FORM
+// ══════════════════════════════════════════════════════
+// Set default date to today
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+// Live preview
+['f-total', 'f-principal'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+
+function updatePreview() {
+  const total = parseFloat(document.getElementById('f-total').value) || 0;
+  const principal = parseFloat(document.getElementById('f-principal').value) || 0;
+  const box = document.getElementById('preview-box');
+
+  if (total > 0 && principal > 0) {
+    const profit = total - principal;
+    const rate = principal > 0 ? (profit / principal * 100) : 0;
+    box.classList.remove('hidden');
+    const pp = document.getElementById('prev-profit');
+    const pr = document.getElementById('prev-rate');
+    pp.textContent = (profit >= 0 ? '+' : '') + '฿' + fmt(profit);
+    pp.className = 'num font-semibold ' + (profit >= 0 ? 'profit-pos' : 'profit-neg');
+    pr.textContent = (rate >= 0 ? '+' : '') + rate.toFixed(2) + '%';
+    pr.className = 'num font-semibold ' + (rate >= 0 ? 'profit-pos' : 'profit-neg');
+  } else {
+    box.classList.add('hidden');
+  }
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const txt = document.getElementById('submit-text');
+  btn.disabled = true;
+  txt.textContent = '⏳ กำลังบันทึก...';
+
+  const payload = {
+    action: 'save',
+    date: document.getElementById('f-date').value,
+    totalBalance: parseFloat(document.getElementById('f-total').value),
+    principal: parseFloat(document.getElementById('f-principal').value),
+    currentPlan: document.getElementById('f-plan').value,
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (json.success) {
+      toast('บันทึกสำเร็จ! ✨');
+      document.getElementById('entry-form').reset();
+      document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('preview-box').classList.add('hidden');
+      await fetchData();
+      setTimeout(() => switchTab('dashboard'), 800);
+    } else {
+      throw new Error(json.error || 'บันทึกไม่สำเร็จ');
+    }
+  } catch (err) {
+    toast('ผิดพลาด: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    txt.textContent = '💾 บันทึกข้อมูล';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  DELETE
+// ══════════════════════════════════════════════════════
+async function deleteEntry(rowId, btnEl) {
+  if (!confirm('ต้องการลบรายการนี้ใช่ไหม?')) return;
+  btnEl.disabled = true;
+  btnEl.textContent = '...';
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'delete', rowId })
+    });
+    const json = await res.json();
+    if (json.success) {
+      toast('ลบรายการสำเร็จ');
+      await fetchData();
+    } else {
+      throw new Error(json.error);
+    }
+  } catch (err) {
+    toast('ลบไม่สำเร็จ: ' + err.message, 'error');
+    btnEl.disabled = false;
+    btnEl.textContent = 'ลบ';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  SIMULATOR
+// ══════════════════════════════════════════════════════
+function runSimulator() {
+  const P = parseFloat(document.getElementById('sim-p').value) || 0;
+  const pmt = parseFloat(document.getElementById('sim-pmt').value) || 0;
+  const annualR = parseFloat(document.getElementById('sim-r').value) / 100;
+  const years = parseInt(document.getElementById('sim-y').value) || 10;
+
+  const r = annualR / 12; // monthly rate
+  const n = years * 12;   // months
+
+  // FV = P(1+r)^n + PMT × [((1+r)^n - 1) / r]
+  const fv = r > 0
+    ? P * Math.pow(1 + r, n) + pmt * ((Math.pow(1 + r, n) - 1) / r)
+    : P + pmt * n;
+
+  const totalInvested = P + pmt * n;
+  const gain = fv - totalInvested;
+  const roi = totalInvested > 0 ? (gain / totalInvested * 100) : 0;
+
+  document.getElementById('sim-fv').textContent = '฿' + fmt(fv);
+  document.getElementById('sim-gain').textContent = '฿' + fmt(gain);
+  document.getElementById('sim-invested').textContent = '฿' + fmt(totalInvested);
+  document.getElementById('sim-roi').textContent = roi.toFixed(1) + '%';
+
+  // Build yearly data
+  const labels = [];
+  const fvData = [];
+  const investedData = [];
+
+  for (let y = 0; y <= years; y++) {
+    const months = y * 12;
+    const invested = P + pmt * months;
+    const val = r > 0
+      ? P * Math.pow(1 + r, months) + pmt * ((Math.pow(1 + r, months) - 1) / r)
+      : invested;
+    labels.push(y === 0 ? 'เริ่มต้น' : 'ปีที่ ' + y);
+    fvData.push(val);
+    investedData.push(invested);
+  }
+
+  renderSimChart(labels, fvData, investedData);
+}
+
+function renderSimChart(labels, fvData, investedData) {
+  const ctx = document.getElementById('simChart').getContext('2d');
+  if (simChartInstance) simChartInstance.destroy();
+
+  simChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'มูลค่าสุดท้าย',
+          data: fvData,
+          borderColor: '#10b981',
+          backgroundColor: ctx => {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 280);
+            g.addColorStop(0, 'rgba(16,185,129,0.25)');
+            g.addColorStop(1, 'rgba(16,185,129,0)');
+            return g;
+          },
+          borderWidth: 2.5,
+          tension: 0.4,
+          fill: true,
+          pointRadius: labels.length > 15 ? 0 : 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#10b981',
+        },
+        {
+          label: 'เงินที่ลงทุน',
+          data: investedData,
+          borderColor: '#3b82f6',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 4],
+          tension: 0.1,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointBackgroundColor: '#3b82f6',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(2,6,23,0.95)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ฿${fmt(ctx.parsed.y)}` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { font: { size: 10 }, maxTicksLimit: 10 }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: {
+            font: { size: 10 },
+            callback: v => '฿' + fmtK(v)
+          }
+        }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+fetchData();
+runSimulator();
+</script>
+</body>
+</html>
